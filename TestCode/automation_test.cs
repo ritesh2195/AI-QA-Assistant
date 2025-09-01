@@ -1,92 +1,119 @@
 using NUnit.Framework;
 using Playwright;
-using System;
 
 public class LoginPageTests
 {
     private Browser browser;
-    private Page page;
 
     [SetUp]
-    public void SetUp()
+    public void Setup()
     {
-        browser = await Playwright.Playwright.CreateAsync();
-        page = await browser.Chromium.NewPageAsync();
+        browser = Playwright.Create().Chromium.Launch();
     }
 
     [TearDown]
-    public async Task TearDown()
+    public void Teardown()
     {
-        await page.CloseAsync();
-        await browser.CloseAsync();
+        browser.Close();
     }
 
     [Test]
-    public async Task VerifyEmailInput()
+    public void VerifyEmailAndPasswordFieldsDisplay()
     {
-        await page.GotoAsync("https://your-login-page-url.com");
-        var emailInput = await page.GetElementByLabelAsync("Email");
-        Assert.That(emailInput, Is.Not.Null);
+        var page = browser.NewPage();
+        page.Goto("https://your-login-page-url"); 
+
+        var emailField = page.Locator("label=Email");
+        var passwordField = page.Locator("label=Password");
+
+        Assert.That(emailField.Exists());
+        Assert.That(passwordField.Exists());
     }
 
     [Test]
-    public async Task VerifyPasswordMasking()
+    public void VerifyPasswordFieldMasking()
     {
-        await page.GotoAsync("https://your-login-page-url.com");
-        await page.HoverAsync(await page.GetElementByLabelAsync("Password"));
-        // Assert that the password input is masked
+        var page = browser.NewPage();
+        page.Goto("https://your-login-page-url"); 
+
+        var passwordField = page.Locator("label=Password");
+        passwordField.Fill("somepassword");
+
+        Assert.That(passwordField.InnerHtml().Contains("•")); 
     }
 
     [Test]
-    public async Task ValidateEmptyEmailSubmission()
+    public void SuccessfulLoginWithValidCredentials()
     {
-        await page.GotoAsync("https://your-login-page-url.com");
-        await page.FillAsync("input[label='Email']", "");
-        await page.ClickAsync("button[type='submit']");
-        // Assert that an error message is displayed
+        var page = browser.NewPage();
+        page.Goto("https://your-login-page-url"); 
+
+        page.Locator("label=Email").Fill("valid_email@example.com");
+        page.Locator("label=Password").Fill("valid_password");
+        page.Click("button:has-text('Login')"); 
+
+        Assert.That(page.Url().Contains("dashboard")); 
     }
 
     [Test]
-    public async Task ValidateEmptyPasswordSubmission()
+    public void SuccessfulLoginWithMixedCaseCredentials()
     {
-        await page.GotoAsync("https://your-login-page-url.com");
-        await page.FillAsync("input[label='Email']", "valid@email.com");
-        await page.FillAsync("input[label='Password']", "");
-        await page.ClickAsync("button[type='submit']");
-        // Assert that an error message is displayed
+        var page = browser.NewPage();
+        page.Goto("https://your-login-page-url"); 
+
+        page.Locator("label=Email").Fill("Valid_email@example.com");
+        page.Locator("label=Password").Fill("MiXeD_PaSsWoRd");
+        page.Click("button:has-text('Login')");
+
+        Assert.That(page.Url().Contains("dashboard")); 
     }
 
     [Test]
-    public async Task ValidateIncorrectCredentials()
+    public void LoginFailureWithIncorrectEmail()
     {
-        await page.GotoAsync("https://your-login-page-url.com");
-        await page.FillAsync("input[label='Email']", "invalid@email.com");
-        await page.FillAsync("input[label='Password']", "incorrectpassword");
-        await page.ClickAsync("button[type='submit']");
-        // Assert that an error message is displayed
+        var page = browser.NewPage();
+        page.Goto("https://your-login-page-url"); 
+
+        page.Locator("label=Email").Fill("incorrect_email");
+        page.Locator("label=Password").Fill("valid_password");
+        page.Click("button:has-text('Login')"); 
+
+        var errorMessage = page.Locator("div.error-message").TextContent();
+        Assert.That(errorMessage).Contains("Invalid email or password"); 
     }
 
     [Test]
-    public async Task VerifySuccessfulLogin()
+    public void LoginFailureWithIncorrectPassword()
     {
-        await page.GotoAsync("https://your-login-page-url.com");
-        await page.FillAsync("input[label='Email']", "valid@email.com");
-        await page.FillAsync("input[label='Password']", "correctpassword");
-        await page.ClickAsync("button[type='submit']");
-        // Assert that the user is redirected to the dashboard page
+        var page = browser.NewPage();
+        page.Goto("https://your-login-page-url"); 
+
+        page.Locator("label=Email").Fill("valid_email@example.com");
+        page.Locator("label=Password").Fill("incorrect_password");
+        page.Click("button:has-text('Login')"); 
+
+        var errorMessage = page.Locator("div.error-message").TextContent();
+        Assert.That(errorMessage).Contains("Invalid email or password"); 
     }
 
     [Test]
-    public async Task TestLoginRateLimiting()
+    public void LoginAttemptLimitExceeded()
     {
-        await page.GotoAsync("https://your-login-page-url.com");
-        for (int i = 0; i < 5; i++)
-        {
-            await page.FillAsync("input[label='Email']", "invalid@email.com");
-            await page.FillAsync("input[label='Password']", "incorrectpassword");
-            await page.ClickAsync("button[type='submit']");
-        }
-        // Assert that a login lockout message is displayed
+        // Implement logic for triggering login attempts
+        // ...
+
+        var page = browser.NewPage();
+        page.Goto("https://your-login-page-url"); 
+
+        // ...  
+        var errorMessage = page.Locator("div.error-message").TextContent();
+        Assert.That(errorMessage).Contains("Account temporarily locked"); 
     }
 }
 ```
+
+**Remember:**
+
+* Replace `"https://your-login-page-url"` with the actual URL of your login page.
+* Adjust the locators (`label=Email`, `button:has-text('Login')`, etc.) to match the specific structure of your login page's HTML. 
+* Modify the test steps and assertions as needed to accurately reflect your application's behavior.

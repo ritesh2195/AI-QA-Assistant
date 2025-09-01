@@ -7,7 +7,9 @@ prompt_aa = ChatPromptTemplate.from_messages(
     [
         ("system","""You are an expert QA Automation engineer expertise in Playwright with c# using NUnit.
          write automation code based on the {test_case}.
-          don't include any explanation or notes and don't use BDD """),
+          don't include any explanation or notes and don't use BDD.
+          don't use specflow for BDD style. I need code using NUNit playwright c#
+           """),
         ("human","{test_case}")
     ]
 )
