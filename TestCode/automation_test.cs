@@ -1,119 +1,109 @@
+C#
 using NUnit.Framework;
-using Playwright;
+using OpenQA.Selenium.Playwright;
+using static OpenQA.Selenium.Playwright.Selectors;
 
-public class LoginPageTests
+namespace MyLoginTests
 {
-    private Browser browser;
-
-    [SetUp]
-    public void Setup()
+    public class LoginTests
     {
-        browser = Playwright.Create().Chromium.Launch();
-    }
+        [Test]
+        public void VerifyEmailAndPasswordFields()
+        {
+            using var playwright = Playwright.Create();
+            var browser = playwright.Chromium.Launch();
+            var page = browser.NewPage();
+            page.Goto("https://example.com/login"); 
 
-    [TearDown]
-    public void Teardown()
-    {
-        browser.Close();
-    }
+            var emailField = page.GetElementByLabel("Email");
+            var passwordField = page.GetElementByLabel("Password");
 
-    [Test]
-    public void VerifyEmailAndPasswordFieldsDisplay()
-    {
-        var page = browser.NewPage();
-        page.Goto("https://your-login-page-url"); 
+            Assert.That(emailField, Is.Not.Null);
+            Assert.That(passwordField, Is.Not.Null);
+        }
 
-        var emailField = page.Locator("label=Email");
-        var passwordField = page.Locator("label=Password");
+        [Test]
+        public void TestPasswordMasking()
+        {
+            using var playwright = Playwright.Create();
+            var browser = playwright.Chromium.Launch();
+            var page = browser.NewPage();
+            page.Goto("https://example.com/login");
 
-        Assert.That(emailField.Exists());
-        Assert.That(passwordField.Exists());
-    }
+            var passwordField = page.GetElementByLabel("Password");
+            passwordField.Fill("TestPassword");
 
-    [Test]
-    public void VerifyPasswordFieldMasking()
-    {
-        var page = browser.NewPage();
-        page.Goto("https://your-login-page-url"); 
+            Assert.That(passwordField.InnerText, Does.Contain("*****"));
+        }
 
-        var passwordField = page.Locator("label=Password");
-        passwordField.Fill("somepassword");
+        [Test]
+        public void VerifySuccessfulLogin()
+        {
+            using var playwright = Playwright.Create();
+            var browser = playwright.Chromium.Launch();
+            var page = browser.NewPage();
+            page.Goto("https://example.com/login");
 
-        Assert.That(passwordField.InnerHtml().Contains("•")); 
-    }
+            var emailField = page.GetElementByLabel("Email");
+            var passwordField = page.GetElementByLabel("Password");
+            var loginButton = page.GetElementByRole("button", "Login");
 
-    [Test]
-    public void SuccessfulLoginWithValidCredentials()
-    {
-        var page = browser.NewPage();
-        page.Goto("https://your-login-page-url"); 
+            emailField.Fill("valid_email@example.com");
+            passwordField.Fill("valid_password");
+            loginButton.Click();
 
-        page.Locator("label=Email").Fill("valid_email@example.com");
-        page.Locator("label=Password").Fill("valid_password");
-        page.Click("button:has-text('Login')"); 
+            Assert.That(page.Url, Does.StartWith("https://example.com/dashboard"));
+        }
 
-        Assert.That(page.Url().Contains("dashboard")); 
-    }
+        [Test]
+        public void TestLoginWithIncorrectCredentials()
+        {
+            using var playwright = Playwright.Create();
+            var browser = playwright.Chromium.Launch();
+            var page = browser.NewPage();
+            page.Goto("https://example.com/login");
 
-    [Test]
-    public void SuccessfulLoginWithMixedCaseCredentials()
-    {
-        var page = browser.NewPage();
-        page.Goto("https://your-login-page-url"); 
+            var emailField = page.GetElementByLabel("Email");
+            var passwordField = page.GetElementByLabel("Password");
+            var loginButton = page.GetElementByRole("button", "Login");
 
-        page.Locator("label=Email").Fill("Valid_email@example.com");
-        page.Locator("label=Password").Fill("MiXeD_PaSsWoRd");
-        page.Click("button:has-text('Login')");
+            emailField.Fill("invalid_email@example.com");
+            passwordField.Fill("invalid_password");
+            loginButton.Click();
 
-        Assert.That(page.Url().Contains("dashboard")); 
-    }
+            var errorMessage = page.GetElementByRole("alert", "error");
+            Assert.That(errorMessage, Is.Not.Null);
+        }
 
-    [Test]
-    public void LoginFailureWithIncorrectEmail()
-    {
-        var page = browser.NewPage();
-        page.Goto("https://your-login-page-url"); 
+        [Test]
+        public void TestExceedingMaximumLoginAttempts()
+        {
+            using var playwright = Playwright.Create();
+            var browser = playwright.Chromium.Launch();
+            var page = browser.NewPage();
+            page.Goto("https://example.com/login");
 
-        page.Locator("label=Email").Fill("incorrect_email");
-        page.Locator("label=Password").Fill("valid_password");
-        page.Click("button:has-text('Login')"); 
+            var emailField = page.GetElementByLabel("Email");
+            var passwordField = page.GetElementByLabel("Password");
+            var loginButton = page.GetElementByRole("button", "Login");
 
-        var errorMessage = page.Locator("div.error-message").TextContent();
-        Assert.That(errorMessage).Contains("Invalid email or password"); 
-    }
+            for (int i = 0; i < 5; i++)
+            {
+                emailField.Fill("invalid_email@example.com");
+                passwordField.Fill("invalid_password");
+                loginButton.Click();
+            }
 
-    [Test]
-    public void LoginFailureWithIncorrectPassword()
-    {
-        var page = browser.NewPage();
-        page.Goto("https://your-login-page-url"); 
+            // Attempt login again and check for lockout message
+            emailField.Fill("invalid_email@example.com");
+            passwordField.Fill("invalid_password");
+            loginButton.Click();
 
-        page.Locator("label=Email").Fill("valid_email@example.com");
-        page.Locator("label=Password").Fill("incorrect_password");
-        page.Click("button:has-text('Login')"); 
-
-        var errorMessage = page.Locator("div.error-message").TextContent();
-        Assert.That(errorMessage).Contains("Invalid email or password"); 
-    }
-
-    [Test]
-    public void LoginAttemptLimitExceeded()
-    {
-        // Implement logic for triggering login attempts
-        // ...
-
-        var page = browser.NewPage();
-        page.Goto("https://your-login-page-url"); 
-
-        // ...  
-        var errorMessage = page.Locator("div.error-message").TextContent();
-        Assert.That(errorMessage).Contains("Account temporarily locked"); 
+            var lockoutMessage = page.GetElementByRole("alert", "error");
+            Assert.That(lockoutMessage, Is.Not.Null);
+            Assert.That(lockoutMessage.InnerText, Does.Contain("Account locked"));
+            Assert.That(lockoutMessage.InnerText, Does.Contain("will be available in"));
+        }
     }
 }
 ```
-
-**Remember:**
-
-* Replace `"https://your-login-page-url"` with the actual URL of your login page.
-* Adjust the locators (`label=Email`, `button:has-text('Login')`, etc.) to match the specific structure of your login page's HTML. 
-* Modify the test steps and assertions as needed to accurately reflect your application's behavior.
